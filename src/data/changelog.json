@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-07T03:29:42.548Z",
-  "last_commit": "47de2dfd7bed14be7c960ac8c31df480403ab38f",
+  "generated_at": "2026-09-07T03:59:42.309Z",
+  "last_commit": "5af260cd150351176c3160f3cbbe4e207472d10a",
   "releases": [
     {
       "version": "0.0.0049",
@@ -7489,7 +7489,20 @@
         }
       ],
       "commit": "47de2dfd7b"
+    },
+    {
+      "version": "2.14.8",
+      "date": "2026-09-07",
+      "release_type": "patch",
+      "title": "Link pending expenditures and isolate sqlite driver",
+      "changes": [
+        {
+          "category": "FIXED",
+          "description": "Link pending expenditures and isolate sqlite driver"
+        }
+      ],
+      "commit": "5af260cd15"
     }
   ],
-  "app_version": "2.14.8"
+  "app_version": "2.14.9"
 }

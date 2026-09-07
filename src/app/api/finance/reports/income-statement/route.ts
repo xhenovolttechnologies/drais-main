@@ -98,9 +98,9 @@ export async function GET(req: NextRequest) {
         COALESCE(SUM(src.amount), 0) as total_amount,
         COUNT(src.amount) as transaction_count
       FROM finance_categories fc
-      -- Expenses have TWO sources, same as income: manually categorised `ledger`
-      -- rows AND the `expenditures` workflow (add/approve/reject). Previously
-      -- only `ledger` counted, so recording an expenditure never reduced net
+      -- Expenses have TWO sources, same as income: manually categorised ledger
+      -- rows AND the expenditures workflow (add/approve/reject). Previously
+      -- only ledger counted, so recording an expenditure never reduced net
       -- income — it only ever showed up as an "accounts payable" liability on
       -- the balance sheet while status = 'pending', then vanished entirely once
       -- approved/paid. Cancelled expenditures never happened, so they're excluded.
