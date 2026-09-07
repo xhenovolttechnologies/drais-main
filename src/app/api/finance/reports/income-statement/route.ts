@@ -95,24 +95,36 @@ export async function GET(req: NextRequest) {
       SELECT 
         fc.id as category_id,
         fc.name as category_name,
-        COALESCE(SUM(l.amount), 0) as total_amount,
-        COUNT(l.id) as transaction_count
+        COALESCE(SUM(src.amount), 0) as total_amount,
+        COUNT(src.amount) as transaction_count
       FROM finance_categories fc
-      LEFT JOIN ledger l ON fc.id = l.category_id
-        -- ledger has NO status / deleted_at / transaction_date columns; the
-        -- date is created_at. Referencing them threw "Unknown column" and 500'd
-        -- this route on every request since it was written.
-        AND l.school_id = ?          -- global categories must not pull in
-                                     -- other schools' ledger rows
-        ${startDate ? 'AND DATE(l.created_at) >= ?' : ''}
-        ${endDate ? 'AND DATE(l.created_at) <= ?' : ''}
+      -- Expenses have TWO sources, same as income: manually categorised `ledger`
+      -- rows AND the `expenditures` workflow (add/approve/reject). Previously
+      -- only `ledger` counted, so recording an expenditure never reduced net
+      -- income — it only ever showed up as an "accounts payable" liability on
+      -- the balance sheet while status = 'pending', then vanished entirely once
+      -- approved/paid. Cancelled expenditures never happened, so they're excluded.
+      LEFT JOIN (
+        SELECT category_id, amount FROM ledger
+         WHERE school_id = ?
+           ${startDate ? 'AND DATE(created_at) >= ?' : ''}
+           ${endDate ? 'AND DATE(created_at) <= ?' : ''}
+        UNION ALL
+        SELECT category_id, amount FROM expenditures
+         WHERE school_id = ? AND status <> 'cancelled' AND (deleted_at IS NULL OR deleted_at = '')
+           ${startDate ? 'AND expense_date >= ?' : ''}
+           ${endDate ? 'AND expense_date <= ?' : ''}
+      ) src ON fc.id = src.category_id
       WHERE fc.category_type = 'expense'
         AND (fc.school_id = ? OR fc.school_id IS NULL)
       GROUP BY fc.id, fc.name
       ORDER BY total_amount DESC
     `;
     
-    const expenseParams: any[] = [schoolId];  // join scope
+    const expenseParams: any[] = [schoolId];  // ledger join scope
+    if (startDate) expenseParams.push(startDate);
+    if (endDate) expenseParams.push(endDate);
+    expenseParams.push(schoolId);             // expenditures join scope
     if (startDate) expenseParams.push(startDate);
     if (endDate) expenseParams.push(endDate);
     expenseParams.push(schoolId);             // category scope

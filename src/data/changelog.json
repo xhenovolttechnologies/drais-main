@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-05T19:39:06.421Z",
-  "last_commit": "d6f5097742edc3f796c2d18431d88f9d886c7607",
+  "generated_at": "2026-09-07T02:49:00.008Z",
+  "last_commit": "0b0d4e51d7d323038f6c6b33403f264dad1f6a7b",
   "releases": [
     {
       "version": "0.0.0049",
@@ -7463,7 +7463,20 @@
         }
       ],
       "commit": "d6f5097742"
+    },
+    {
+      "version": "2.14.6",
+      "date": "2026-09-05",
+      "release_type": "patch",
+      "title": "Allow ADMS device tables to register unassigned devices",
+      "changes": [
+        {
+          "category": "FIXED",
+          "description": "Allow ADMS device tables to register unassigned devices"
+        }
+      ],
+      "commit": "0b0d4e51d7"
     }
   ],
-  "app_version": "2.14.6"
+  "app_version": "2.14.7"
 }

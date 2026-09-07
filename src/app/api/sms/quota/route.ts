@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionSchoolId } from '@/lib/auth';
-import { getSchoolSmsPosition, getProviderBalanceCached } from '@/lib/control/sms-economics';
+import { getSchoolSmsPosition, getProviderBalanceCached, getSmsPricing } from '@/lib/control/sms-economics';
 
 export const runtime = 'nodejs';
 
@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
   const session = await getSessionSchoolId(req);
   if (!session) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-  const [pos, bal] = await Promise.all([
+  const [pos, bal, pricing] = await Promise.all([
     getSchoolSmsPosition(session.schoolId).catch(() => ({ quota: null as number | null, used: 0, remaining: Infinity })),
     getProviderBalanceCached().catch(() => null),
+    getSmsPricing(),
   ]);
 
-  const unitCost = Number(process.env.SMS_UNIT_COST_UGX || 32);
-  const providerCanSend = !bal || !bal.ok || bal.amount >= unitCost; // unknown → assume ok
+  const providerCanSend = !bal || !bal.ok || bal.amount >= pricing.internalCost; // unknown → assume ok
   const allocationExhausted = pos.quota != null && pos.remaining <= 0;
 
   return NextResponse.json({

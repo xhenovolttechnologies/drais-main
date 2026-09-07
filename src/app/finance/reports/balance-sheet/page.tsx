@@ -17,6 +17,7 @@
  */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import useSWR from 'swr';
 import { fetcher } from '@/utils/fetcher';
 import { useCurrency } from '@/hooks/useCurrency';

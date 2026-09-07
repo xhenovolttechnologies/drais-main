@@ -3,7 +3,7 @@ import { sendSMS, logSMSActivity } from '@/lib/africastalking';
 import { getSessionSchoolId } from '@/lib/auth';
 import { getCommSettings } from '@/lib/comm/settings';
 import { logAudit, AuditAction } from '@/lib/audit';
-import { getSchoolSmsPosition, getProviderBalanceCached } from '@/lib/control/sms-economics';
+import { getSchoolSmsPosition, getProviderBalanceCached, getSmsPricing } from '@/lib/control/sms-economics';
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
     // Money enforcement: if the platform provider balance can't cover even one
     // SMS, block LOUDLY (never let a send fail silently downstream).
     const bal = await getProviderBalanceCached().catch(() => null);
-    const unitCost = Number(process.env.SMS_UNIT_COST_UGX || 32);
-    if (bal && bal.ok && bal.amount < unitCost) {
+    const pricing = await getSmsPricing();
+    if (bal && bal.ok && bal.amount < pricing.internalCost) {
       return NextResponse.json({
         success: false,
         error: 'The platform SMS balance is depleted — messages cannot be sent until the administrator tops up the SMS account.',

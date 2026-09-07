@@ -7,10 +7,9 @@
  * per-school USAGE derived from the SMS_SENT audit events (the only structured
  * usage record — logSMSActivity is a console no-op). Remaining = quota − used,
  * so one school can't quietly burn another's credits.
- *
- * Pure helpers (tested) do the maths; the async fns do I/O.
  */
 import { query } from '@/lib/db';
+import { getSetting, setSetting } from '@/lib/control/platform-settings';
 
 // ── Pure maths ──────────────────────────────────────────────────────────────
 
@@ -25,6 +24,17 @@ export function estimatedSms(balanceAmount: number, costPerSms: number): number 
 export function remainingQuota(quota: number | null | undefined, used: number): number {
   if (quota == null) return Infinity; // unallocated = no cap
   return Math.max(0, Number(quota) - Math.max(0, used));
+}
+
+/** Profit earned per SMS segment: what the school is charged minus what Africa's Talking charges us. */
+export function profitPerSms(retailPrice: number, internalCost: number): number {
+  return Number(retailPrice) - Number(internalCost);
+}
+
+/** Profit margin as a % of the retail price (0 when retail price is not positive). */
+export function marginPct(retailPrice: number, internalCost: number): number {
+  if (!Number.isFinite(retailPrice) || retailPrice <= 0) return 0;
+  return (profitPerSms(retailPrice, internalCost) / retailPrice) * 100;
 }
 
 /** Parse an AT balance string like "KES 1785.50" → { currency, amount }. */
@@ -137,6 +147,51 @@ export async function getAllocations(): Promise<Record<number, { quota: number; 
   const out: Record<number, { quota: number; note: string | null }> = {};
   for (const r of rows) out[Number(r.school_id)] = { quota: Number(r.quota_sms || 0), note: r.note ?? null };
   return out;
+}
+
+export interface SmsPricing { internalCost: number; retailPrice: number }
+
+// Africa's Talking's actual per-SMS charge for a Uganda route varies by
+// network/sender-ID/volume — this is a starting estimate, not gospel. Verify
+// against the live rate on your AT account and correct it from the Control
+// Center rather than editing this default.
+const DEFAULT_INTERNAL_COST_UGX = 27;
+// What DRAIS currently charges schools per SMS segment (the "flat 30" rate).
+const DEFAULT_RETAIL_PRICE_UGX = 30;
+
+let pricingCache: { at: number; val: SmsPricing } | null = null;
+
+/** Current internal cost (what we pay the provider) vs retail price (what schools are charged). */
+export async function getSmsPricing(ttlMs = 60_000): Promise<SmsPricing> {
+  if (pricingCache && Date.now() - pricingCache.at < ttlMs) return pricingCache.val;
+  await ensureSchema();
+  const [internalRaw, retailRaw] = await Promise.all([
+    getSetting('sms_internal_cost_ugx'),
+    getSetting('sms_retail_price_ugx'),
+  ]);
+  const internalCost = Number(internalRaw ?? process.env.SMS_UNIT_COST_UGX);
+  const retailPrice = Number(retailRaw ?? process.env.SMS_RETAIL_PRICE_UGX);
+  const val: SmsPricing = {
+    internalCost: Number.isFinite(internalCost) && internalCost > 0 ? internalCost : DEFAULT_INTERNAL_COST_UGX,
+    retailPrice: Number.isFinite(retailPrice) && retailPrice > 0 ? retailPrice : DEFAULT_RETAIL_PRICE_UGX,
+  };
+  pricingCache = { at: Date.now(), val };
+  return val;
+}
+
+/** Set (upsert) the platform's SMS internal cost + retail price. */
+export async function setSmsPricing(internalCost: number, retailPrice: number): Promise<SmsPricing> {
+  await ensureSchema();
+  const val: SmsPricing = {
+    internalCost: Number.isFinite(internalCost) && internalCost > 0 ? internalCost : DEFAULT_INTERNAL_COST_UGX,
+    retailPrice: Number.isFinite(retailPrice) && retailPrice > 0 ? retailPrice : DEFAULT_RETAIL_PRICE_UGX,
+  };
+  await Promise.all([
+    setSetting('sms_internal_cost_ugx', String(val.internalCost)),
+    setSetting('sms_retail_price_ugx', String(val.retailPrice)),
+  ]);
+  pricingCache = { at: Date.now(), val };
+  return val;
 }
 
 /** Set (upsert) a school's SMS allocation. */
