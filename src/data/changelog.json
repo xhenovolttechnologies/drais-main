@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-09-07T02:49:00.008Z",
-  "last_commit": "0b0d4e51d7d323038f6c6b33403f264dad1f6a7b",
+  "generated_at": "2026-09-07T03:29:42.548Z",
+  "last_commit": "47de2dfd7bed14be7c960ac8c31df480403ab38f",
   "releases": [
     {
       "version": "0.0.0049",
@@ -7476,7 +7476,20 @@
         }
       ],
       "commit": "0b0d4e51d7"
+    },
+    {
+      "version": "2.14.7",
+      "date": "2026-09-07",
+      "release_type": "patch",
+      "title": "resolve dit button on finance/expenditures route",
+      "changes": [
+        {
+          "category": "IMPROVED",
+          "description": "resolve dit button on finance/expenditures route"
+        }
+      ],
+      "commit": "47de2dfd7b"
     }
   ],
-  "app_version": "2.14.7"
+  "app_version": "2.14.8"
 }

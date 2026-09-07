@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Plus, Search, Edit, Trash2, DollarSign, TrendingUp, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { showToast, confirmAction } from '@/lib/toast';
@@ -29,9 +30,12 @@ interface Expenditure {
 export default function ExpendituresPage() {
   const { t } = useI18n();
   const { format, code } = useCurrency();
+  // Supports a deep link from the balance sheet's "Amounts payable" line
+  // (?status=pending) so a pending expenditure isn't a dead end there.
+  const initialStatus = useSearchParams().get('status') || '';
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Expenditure | null>(null);
@@ -194,8 +198,10 @@ export default function ExpendituresPage() {
     }
   };
 
+  // Defensive: compare case-insensitively — a school's data can predate the
+  // ENUM constraint (older imports) and store 'Pending'/'PENDING' instead.
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch ((status || '').toLowerCase()) {
       case 'approved': return 'text-green-600 bg-green-100';
       case 'pending': return 'text-yellow-600 bg-yellow-100';
       case 'paid': return 'text-blue-600 bg-blue-100';
@@ -290,7 +296,7 @@ export default function ExpendituresPage() {
                   <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white text-right">{format(Number(item.amount))}</td>
                   <td className="px-6 py-4 text-center"><span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>{item.status}</span></td>
                   <td className="px-6 py-4"><div className="flex items-center justify-center gap-2">
-                    {item.status === 'pending' && (
+                    {(item.status || '').toLowerCase() === 'pending' && (
                       <>
                         <button onClick={() => handleApprove(item.id)} className="p-2 rounded text-green-600 hover:bg-green-50" title="Approve"><CheckCircle className="w-4 h-4" /></button>
                         <button onClick={() => handleReject(item.id)} className="p-2 rounded text-orange-600 hover:bg-orange-50" title="Reject"><XCircle className="w-4 h-4" /></button>

@@ -17,11 +17,23 @@
  * standalone connection helper, used directly only by tests and
  * provisioning, which intentionally manage their own connection lifecycle
  * rather than sharing the singleton.
+ *
+ * The require() below is deliberately NOT `require('better-sqlite3')` as a
+ * literal. Turbopack (the build's bundler since Aug 2026, see next.config.js)
+ * statically resolves literal require()/import specifiers at BUILD time even
+ * for packages listed in serverExternalPackages, and fails the whole build
+ * if an optionalDependency didn't install — unlike webpack, which treats an
+ * external as a pure runtime require with no build-time resolution. Building
+ * the specifier from parts keeps this invisible to that static analysis, so
+ * a school/deployment without better-sqlite3 installed still builds fine and
+ * only throws if local-sqlite mode is actually used at runtime.
  */
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { ensureSchema } from './schema';
 
 export type SqliteConnection = Database.Database;
+
+const BETTER_SQLITE3_PKG = ['better', 'sqlite3'].join('-');
 
 /**
  * Open (or create) a SQLite database at `path`. Pass ':memory:' for a
@@ -30,7 +42,9 @@ export type SqliteConnection = Database.Database;
  * architecture-scan.mjs convention already established in this repo).
  */
 export function openSqliteDb(path: string): SqliteConnection {
-  const db = new Database(path);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const DatabaseCtor = require(BETTER_SQLITE3_PKG) as typeof Database;
+  const db = new DatabaseCtor(path);
   // WAL = the mode Electron/desktop local mode will actually run under
   // (concurrent readers don't block the single writer). Harmless for
   // ':memory:' (SQLite ignores journal_mode there).

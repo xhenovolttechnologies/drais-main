@@ -180,8 +180,19 @@ export default function BalanceSheetPage() {
       <SectionTitle>{t('finance.liabilities', 'Liabilities')}</SectionTitle>
 
       <Line
-        label={t('finance.accountsPayable', 'Amounts payable')}
-        hint={`${Number(payable.count ?? 0)} ${t('finance.pendingExpenditures', 'pending expenses awaiting payment')}`}
+        label={
+          // This statement is read-only — approving/editing pending expenditures
+          // happens on the Expenditures page, not here. Link straight to it so
+          // "1 pending expenditure" isn't a dead end.
+          Number(payable.count ?? 0) > 0 ? (
+            <Link href="/finance/expenditures?status=pending" className="hover:underline text-amber-700 dark:text-amber-400">
+              {t('finance.accountsPayable', 'Amounts payable')}
+            </Link>
+          ) : (
+            t('finance.accountsPayable', 'Amounts payable')
+          )
+        }
+        hint={`${Number(payable.count ?? 0)} ${t('finance.pendingExpenditures', 'pending expenses awaiting payment')} — click to review`}
         value={format(totalPayable)}
       />
       <Line
